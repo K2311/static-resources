@@ -18,17 +18,44 @@ const server   = http.createServer((req,res)=>{
         '.gif': 'image/gif',
     };
 
-    const contentType = mimeTypes[ext] || 'text/html';
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
 
-    fs.readFile(filePath, (err, content) => {
-        if (err) {
-            res.statusCode = 404;
-            res.end('File not found');
-        } else {
-            res.setHeader('Content-Type', contentType);
-            res.end(content);
+    //check file exist and readble before read file
+    fs.access(filePath,fs.constants.F_OK | fs.constants.R_OK,(err)=>{
+        if(err){
+            if(err.code==='ENOENT'){
+                res.statusCode = 404;
+                res.setHeader('Content-Type', 'text/html');
+                res.end('<h1>404 - File Not Found</h1>');
+            }else{
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'text/html');
+                res.end('<h1>500 - Internal Server Error</h1>');
+            }
+            return;
         }
+
+
+        fs.readFile(filePath, (err, content) => {
+            if (err) {
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'text/html');
+                res.end('<h1>500 - Internal Server Error</h1>');
+                return;
+            } 
+                res.statusCode = 200;
+                res.setHeader('Content-Type', contentType);
+    
+                //cache to improve performance
+                res.setHeader('Cache-Control', 'public, max-age=3600');
+                res.end(content);
+           
+        });
+
+       
     });
+
+    
 
 });
 
